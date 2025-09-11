@@ -693,7 +693,7 @@
             <li><a href="#" id="menuUserData"><i class="fas fa-user"></i> Mis Datos</a></li>
             <li><a href="#" id="menuFriends"><i class="fas fa-users"></i> Amigos/Referidos</a></li>
             <li><a href="https://t.me/+KY3hOR3pEsYyNjdh" target="_blank"><i class="fas fa-paper-plane"></i> Grupo de Telegram</a></li>
-            <li><a href="https://t.me/lixo8803" target="_blank"><i class="fas fa-headset"></i> Soporte</a></li>
+            <li><a href="mailto:tradingaidubai@gmail.com"><i class="fas fa-headset"></i> Soporte</a></li>
             <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
         </ul>
         
@@ -711,7 +711,7 @@
             <p>Comparte tu enlace único y gana el 15% de lo que inviertan tus referidos.</p>
             
             <div class="referral-code">
-                <span id="referralLink">https://trading-ai-dubai.com/ref/123456</span>
+                <span id="referralLink">https://tradingaidubai-arch.github.io/Trading-AI-Dubai/ref/123456</span>
                 <button class="copy-btn" id="copyReferral"><i class="fas fa-copy"></i></button>
             </div>
             
@@ -1238,7 +1238,7 @@
             displayUserWallet.textContent = currentUser.wallet || 'No configurada';
             
             // Actualizar enlace de referido
-            referralLink.textContent = `https://trading-ai-dubai.com/ref/${currentUser.referralCode}`;
+            referralLink.textContent = `https://tradingaidubai-arch.github.io/Trading-AI-Dubai/ref/${currentUser.referralCode}`;
             
             // Actualizar estadísticas de referidos
             totalReferrals.textContent = currentUser.referrals.length;
@@ -1303,7 +1303,20 @@
                 clearInterval(countdownInterval);
             }
             
-            const countdownEnd = new Date(currentUser.countdownEnd);
+            // Asegurarse de que countdownEnd es una fecha válida
+            let countdownEnd;
+            if (currentUser.countdownEnd && currentUser.countdownEnd.toDate) {
+                countdownEnd = currentUser.countdownEnd.toDate();
+            } else if (currentUser.countdownEnd instanceof Date) {
+                countdownEnd = currentUser.countdownEnd;
+            } else if (currentUser.countdownEnd) {
+                countdownEnd = new Date(currentUser.countdownEnd);
+            } else {
+                // Si no hay fecha de finalización, crear una a partir de ahora + 24 horas
+                countdownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                currentUser.countdownEnd = countdownEnd;
+                updateUserInFirebase(currentUser);
+            }
             
             countdownInterval = setInterval(() => {
                 const now = new Date();
@@ -1321,7 +1334,7 @@
                     return;
                 }
                 
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const hours = Math.floor(distance / (1000 * 60 * 60));
                 const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                 
