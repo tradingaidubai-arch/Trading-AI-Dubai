@@ -1137,6 +1137,8 @@
                         withdrawApproved: false,
                         countdownStart: null,
                         countdownEnd: null,
+                        initialAmount: 0, // Nuevo campo para guardar el monto inicial
+                        balanceDuplicated: false, // Nuevo campo para evitar duplicación múltiple
                         createdAt: new Date()
                     };
                     
@@ -1273,10 +1275,11 @@
                 
                 const type = transaction.type === 'recharge' ? 'Recarga' : 
                             transaction.type === 'withdraw' ? 'Retiro' : 
-                            transaction.type === 'referral' ? 'Comisión' : 'Transacción';
+                            transaction.type === 'referral' ? 'Comisión' : 
+                            transaction.type === 'profit' ? 'Ganancia Trading' : 'Transacción';
                 
-                const sign = transaction.type === 'recharge' || transaction.type === 'referral' ? '+' : '-';
-                const color = transaction.type === 'recharge' || transaction.type === 'referral' ? '#2ecc71' : '#e74c3c';
+                const sign = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '+' : '-';
+                const color = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '#2ecc71' : '#e74c3c';
                 
                 const status = transaction.status ? `<span class="transaction-status status-${transaction.status}">${transaction.status}</span>` : '';
                 
@@ -1327,7 +1330,38 @@
                     countdown.style.display = 'none';
                     countdownFinished.style.display = 'block';
                     
-                    // Actualizar estado del usuario
+                    // VERIFICAR SI EL SALDO YA FUE DUPLICADO PARA EVITAR DUPLICACIONES MÚLTIPLES
+                    if (!currentUser.balanceDuplicated) {
+                        // CALCULAR EL MONTO ORIGINAL (SALDO ACTUAL DIVIDIDO ENTRE 2)
+                        // O ALTERNATIVAMENTE, USAR EL MONTO INICIAL GUARDADO
+                        const originalAmount = currentUser.initialAmount || (currentUser.balance / 2);
+                        const doubledAmount = originalAmount * 2;
+                        
+                        // ACTUALIZAR EL SALDO DEL USUARIO
+                        currentUser.balance = doubledAmount;
+                        currentUser.balanceDuplicated = true; // MARCAR QUE EL SALDO YA FUE DUPLICADO
+                        
+                        // AGREGAR UNA TRANSACCIÓN QUE MUESTRE LA GANANCIA
+                        const now = new Date();
+                        const transaction = {
+                            type: 'profit',
+                            amount: originalAmount, // MOSTRAR LA GANANCIA (EL MONTO ORIGINAL)
+                            date: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+                            status: 'approved'
+                        };
+                        
+                        currentUser.transactions.push(transaction);
+                        
+                        // ACTUALIZAR FIREBASE
+                        updateUserInFirebase(currentUser);
+                        
+                        // ACTUALIZAR LA UI
+                        updateUI();
+                        
+                        alert(`¡Felicidades! Tu inversión se ha duplicado. Tu saldo ahora es de ${doubledAmount.toFixed(2)} USDT.`);
+                    }
+                    
+                    // Actualizar estado del usuario (permitir retiro)
                     currentUser.withdrawApproved = true;
                     updateUserInFirebase(currentUser);
                     
@@ -1616,6 +1650,10 @@
                             if (rechargeTransaction) {
                                 rechargeTransaction.status = 'approved';
                                 user.balance += rechargeTransaction.amount;
+                                
+                                // GUARDAR EL MONTO INICIAL PARA FUTURA DUPLICACIÓN
+                                user.initialAmount = rechargeTransaction.amount;
+                                user.balanceDuplicated = false; // RESETEAR EL ESTADO DE DUPLICACIÓN
                                 
                                 // Iniciar cuenta regresiva si es la primera recarga aprobada
                                 if (!user.countdownStart) {
