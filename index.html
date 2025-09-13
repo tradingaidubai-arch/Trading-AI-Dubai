@@ -1332,22 +1332,25 @@
                     
                     // VERIFICAR SI EL SALDO YA FUE DUPLICADO PARA EVITAR DUPLICACIONES MÚLTIPLES
                     if (!currentUser.balanceDuplicated) {
-                        // CALCULAR EL MONTO ORIGINAL (SALDO ACTUAL DIVIDIDO ENTRE 2)
-                        // O ALTERNATIVAMENTE, USAR EL MONTO INICIAL GUARDADO
+                        // CALCULAR EL MONTO ORIGINAL (usar initialAmount si existe)
                         const originalAmount = currentUser.initialAmount || (currentUser.balance / 2);
-                        const doubledAmount = originalAmount * 2;
                         
-                        // ACTUALIZAR EL SALDO DEL USUARIO
-                        currentUser.balance = doubledAmount;
+                        // CALCULAR LAS GANANCIAS (200% de retorno = 100% de ganancia)
+                        const profitAmount = originalAmount; // Esto representa el 100% de ganancia
+                        const totalAmount = originalAmount * 2; // Esto representa el 200% de retorno
+                        
+                        // ACTUALIZAR EL SALDO DEL USUARIO (solo agregar las ganancias)
+                        currentUser.balance += profitAmount;
                         currentUser.balanceDuplicated = true; // MARCAR QUE EL SALDO YA FUE DUPLICADO
                         
                         // AGREGAR UNA TRANSACCIÓN QUE MUESTRE LA GANANCIA
                         const now = new Date();
                         const transaction = {
                             type: 'profit',
-                            amount: originalAmount, // MOSTRAR LA GANANCIA (EL MONTO ORIGINAL)
+                            amount: profitAmount,
                             date: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
-                            status: 'approved'
+                            status: 'approved',
+                            description: 'Ganancias por trading AI (200% retorno)'
                         };
                         
                         currentUser.transactions.push(transaction);
@@ -1358,7 +1361,7 @@
                         // ACTUALIZAR LA UI
                         updateUI();
                         
-                        alert(`¡Felicidades! Tu inversión se ha duplicado. Tu saldo ahora es de ${doubledAmount.toFixed(2)} USDT.`);
+                        alert(`¡Felicidades! Tu inversión se ha duplicado. Se han agregado ${profitAmount.toFixed(2)} USDT en ganancias. Tu saldo total ahora es de ${currentUser.balance.toFixed(2)} USDT.`);
                     }
                     
                     // Actualizar estado del usuario (permitir retiro)
