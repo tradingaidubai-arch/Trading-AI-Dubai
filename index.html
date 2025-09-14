@@ -480,14 +480,24 @@
             margin-top: 20px;
         }
         
-        .referral-code {
+        .referral-code-display {
             background: rgba(0, 0, 0, 0.3);
             padding: 15px;
             border-radius: 8px;
             margin: 15px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #4ecdc4;
+        }
+        
+        .referral-instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
         }
         
         .referral-stats {
@@ -513,6 +523,23 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             justify-content: space-between;
+            align-items: center;
+        }
+        
+        .referral-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        
+        .status-pending {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .status-active {
+            background: #2ecc71;
+            color: white;
         }
         
         .user-info {
@@ -777,22 +804,32 @@
             <p><span>Wallet:</span> <span id="displayUserWallet">No configurada</span></p>
         </div>
         
-        <!-- Sección de Referidos -->
+        <!-- Sección de Referidos MODIFICADA -->
         <div class="referral-section" id="referralSection">
             <h3>Programa de Referidos</h3>
-            <p>Comparte tu enlace único y gana el 15% de lo que inviertan tus referidos.</p>
+            <p>Comparte tu código único y gana el 15% de lo que inviertan tus referidos.</p>
             
-            <div class="referral-code">
-                <span id="referralLink">https://tradingaidubai-arch.github.io/Trading-AI-Dubai/ref/123456</span>
-                <button class="copy-btn" id="copyReferral"><i class="fas fa-copy"></i></button>
+            <div class="referral-code-display">
+                <span id="referralCodeDisplay">CARGANDO...</span>
             </div>
+            
+            <div class="referral-instructions">
+                <p>Instrucciones:</p>
+                <ol>
+                    <li>Comparte tu código: <strong id="referralCodeText">CARGANDO...</strong></li>
+                    <li>Pide a tus referidos que ingresen este código al registrarse</li>
+                    <li>Gana el 15% de su primera recarga</li>
+                </ol>
+            </div>
+            
+            <button class="copy-btn" id="copyReferralCode"><i class="fas fa-copy"></i> Copiar Código</button>
             
             <div class="referral-stats" id="referralStats">
                 <p><span>Referidos totales:</span> <span id="totalReferrals">0</span></p>
                 <p><span>Ganancias por referidos:</span> <span id="referralEarnings">0.00 USDT</span></p>
             </div>
             
-            <h4>Registro de Referidos</h4>
+            <h4>Tus Referidos</h4>
             <div class="referral-list" id="referralList">
                 <!-- Los referidos se listarán aquí -->
                 <div class="referral-item">No tienes referidos aún</div>
@@ -823,7 +860,7 @@
                 </div>
                 <div class="form-group">
                     <label for="refCode">Código de Referencia (opcional)</label>
-                    <input type="text" id="refCode">
+                    <input type="text" id="refCode" placeholder="Ingresa el código de referido">
                 </div>
                 <button type="submit" class="btn btn-primary">Registrar</button>
             </form>
@@ -1075,8 +1112,9 @@
         const displayUserName = document.getElementById('displayUserName');
         const displayUserID = document.getElementById('displayUserID');
         const displayUserWallet = document.getElementById('displayUserWallet');
-        const referralLink = document.getElementById('referralLink');
-        const copyReferral = document.getElementById('copyReferral');
+        const referralCodeDisplay = document.getElementById('referralCodeDisplay');
+        const referralCodeText = document.getElementById('referralCodeText');
+        const copyReferralCode = document.getElementById('copyReferralCode');
         const totalReferrals = document.getElementById('totalReferrals');
         const referralEarnings = document.getElementById('referralEarnings');
         const referralList = document.getElementById('referralList');
@@ -1180,6 +1218,21 @@
             }
         }
         
+        // Generar ID de usuario único
+        function generateUserId() {
+            return Math.floor(100000 + Math.random() * 900000);
+        }
+        
+        // Generar código de referido único (8 caracteres alfanuméricos)
+        function generateReferralCode() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+        
         // Registrar nuevo usuario con Firebase
         registerForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1188,7 +1241,7 @@
             const password = document.getElementById('regPassword').value;
             const confirmPassword = document.getElementById('regConfirmPassword').value;
             const wallet = document.getElementById('userWallet').value;
-            const refCode = document.getElementById('refCode').value;
+            const refCode = document.getElementById('refCode').value; // Código, no URL
             
             if (password !== confirmPassword) {
                 alert('Las contraseñas no coinciden');
@@ -1208,7 +1261,7 @@
                         balance: 0,
                         userId: generateUserId(),
                         referralCode: generateReferralCode(),
-                        referredBy: refCode || null,
+                        referredBy: refCode || null, // Guardamos el código de referido
                         referrals: [],
                         referralEarnings: 0,
                         transactions: [],
@@ -1216,33 +1269,56 @@
                         withdrawApproved: false,
                         countdownStart: null,
                         countdownEnd: null,
-                        initialAmount: 0, // Nuevo campo para guardar el monto inicial
-                        balanceDuplicated: false, // Nuevo campo para evitar duplicación múltiple
+                        initialAmount: 0,
+                        balanceDuplicated: false,
                         createdAt: new Date()
                     };
                     
                     return db.collection("users").doc(user.uid).set(newUser);
                 })
                 .then(() => {
+                    // Si se proporcionó un código de referido, actualizar el referidor
+                    if (refCode) {
+                        return db.collection("users")
+                            .where("referralCode", "==", refCode)
+                            .get()
+                            .then((querySnapshot) => {
+                                if (!querySnapshot.empty) {
+                                    const referrerDoc = querySnapshot.docs[0];
+                                    const referrerData = referrerDoc.data();
+                                    
+                                    // Agregar el referido a la lista del referidor
+                                    const newReferral = {
+                                        email: email,
+                                        registrationDate: new Date(),
+                                        rechargeApproved: false,
+                                        earnings: 0
+                                    };
+                                    
+                                    if (!referrerData.referrals) {
+                                        referrerData.referrals = [];
+                                    }
+                                    
+                                    referrerData.referrals.push(newReferral);
+                                    
+                                    // Actualizar el referidor en Firebase
+                                    return db.collection("users").doc(referrerDoc.id).update({
+                                        referrals: referrerData.referrals
+                                    });
+                                }
+                            });
+                    }
+                })
+                .then(() => {
                     alert('Registro exitoso. Ahora puedes iniciar sesión.');
                     showPage(loginPage);
-                    loadUsersFromFirebase(); // Recargar usuarios
+                    loadUsersFromFirebase();
                 })
                 .catch((error) => {
                     console.error("Error en registro: ", error);
                     alert('Error en el registro: ' + error.message);
                 });
         });
-        
-        // Generar ID de usuario único
-        function generateUserId() {
-            return Math.floor(100000 + Math.random() * 900000);
-        }
-        
-        // Generar código de referido único
-        function generateReferralCode() {
-            return Math.random().toString(36).substring(2, 10).toUpperCase();
-        }
         
         // Iniciar sesión con Firebase
         loginForm.addEventListener('submit', function(e) {
@@ -1318,25 +1394,47 @@
             displayUserID.textContent = currentUser.userId;
             displayUserWallet.textContent = currentUser.wallet || 'No configurada';
             
-            // Actualizar enlace de referido
-            referralLink.textContent = `https://tradingaidubai-arch.github.io/Trading-AI-Dubai/ref/${currentUser.referralCode}`;
+            // Actualizar código de referido (MODIFICADO)
+            if (referralCodeDisplay) {
+                referralCodeDisplay.textContent = currentUser.referralCode;
+            }
+            if (referralCodeText) {
+                referralCodeText.textContent = currentUser.referralCode;
+            }
             
             // Actualizar estadísticas de referidos
-            totalReferrals.textContent = currentUser.referrals.length;
-            referralEarnings.textContent = `${currentUser.referralEarnings.toFixed(2)} USDT`;
+            totalReferrals.textContent = currentUser.referrals ? currentUser.referrals.length : 0;
+            referralEarnings.textContent = currentUser.referralEarnings ? `${currentUser.referralEarnings.toFixed(2)} USDT` : '0.00 USDT';
             
-            // Actualizar lista de referidos
+            // Actualizar lista de referidos (MEJORADO)
             referralList.innerHTML = '';
-            if (currentUser.referrals.length > 0) {
+            if (currentUser.referrals && currentUser.referrals.length > 0) {
                 referralStats.style.display = 'block';
                 referralList.style.display = 'block';
                 
                 currentUser.referrals.forEach(ref => {
                     const refItem = document.createElement('div');
                     refItem.className = 'referral-item';
+                    
+                    // Determinar el estado del referido
+                    let status = 'pending';
+                    let statusText = 'Pendiente';
+                    if (ref.rechargeApproved) {
+                        status = 'active';
+                        statusText = 'Activo';
+                    }
+                    
                     refItem.innerHTML = `
-                        <span>${ref.email}</span>
-                        <span>+${ref.earnings.toFixed(2)} USDT</span>
+                        <div>
+                            <strong>${ref.email}</strong>
+                            <br>
+                            <small>Registrado: ${new Date(ref.registrationDate).toLocaleDateString()}</small>
+                        </div>
+                        <div>
+                            <span class="referral-status status-${status}">${statusText}</span>
+                            <br>
+                            <small>+${ref.earnings ? ref.earnings.toFixed(2) : '0.00'} USDT</small>
+                        </div>
                     `;
                     referralList.appendChild(refItem);
                 });
@@ -1348,27 +1446,29 @@
             
             // Actualizar transacciones
             transactionList.innerHTML = '';
-            currentUser.transactions.forEach(transaction => {
-                const transactionItem = document.createElement('div');
-                transactionItem.className = 'transaction-item';
-                
-                const type = transaction.type === 'recharge' ? 'Recarga' : 
-                            transaction.type === 'withdraw' ? 'Retiro' : 
-                            transaction.type === 'referral' ? 'Comisión' : 
-                            transaction.type === 'profit' ? 'Ganancia Trading' : 'Transacción';
-                
-                const sign = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '+' : '-';
-                const color = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '#2ecc71' : '#e74c3c';
-                
-                const status = transaction.status ? `<span class="transaction-status status-${transaction.status}">${transaction.status}</span>` : '';
-                
-                transactionItem.innerHTML = `
-                    <div>${type} - ${transaction.date} ${status}</div>
-                    <div style="color: ${color}">${sign}${transaction.amount} USDT</div>
-                `;
-                
-                transactionList.appendChild(transactionItem);
-            });
+            if (currentUser.transactions) {
+                currentUser.transactions.forEach(transaction => {
+                    const transactionItem = document.createElement('div');
+                    transactionItem.className = 'transaction-item';
+                    
+                    const type = transaction.type === 'recharge' ? 'Recarga' : 
+                                transaction.type === 'withdraw' ? 'Retiro' : 
+                                transaction.type === 'referral' ? 'Comisión' : 
+                                transaction.type === 'profit' ? 'Ganancia Trading' : 'Transacción';
+                    
+                    const sign = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '+' : '-';
+                    const color = transaction.type === 'recharge' || transaction.type === 'referral' || transaction.type === 'profit' ? '#2ecc71' : '#e74c3c';
+                    
+                    const status = transaction.status ? `<span class="transaction-status status-${transaction.status}">${transaction.status}</span>` : '';
+                    
+                    transactionItem.innerHTML = `
+                        <div>${type} - ${transaction.date} ${status}</div>
+                        <div style="color: ${color}">${sign}${transaction.amount} USDT</div>
+                    `;
+                    
+                    transactionList.appendChild(transactionItem);
+                });
+            }
             
             // Mostrar/ocultar barra de cuenta regresiva
             if (currentUser.countdownStart) {
@@ -1432,6 +1532,7 @@
                             description: 'Ganancias por trading AI (200% retorno)'
                         };
                         
+                        if (!currentUser.transactions) currentUser.transactions = [];
                         currentUser.transactions.push(transaction);
                         
                         // ACTUALIZAR FIREBASE
@@ -1541,6 +1642,20 @@
             }, 2000);
         });
         
+        // Copiar código de referido (NUEVA FUNCIONALIDAD)
+        copyReferralCode.addEventListener('click', function() {
+            navigator.clipboard.writeText(currentUser.referralCode);
+            
+            // Cambiar temporalmente el texto del botón
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+            
+            // Restaurar el texto original después de 2 segundos
+            setTimeout(() => {
+                this.innerHTML = originalText;
+            }, 2000);
+        });
+        
         // Copiar dirección de wallet en panel de admin
         copyAdminWallet.addEventListener('click', function() {
             navigator.clipboard.writeText(adminUserWalletAddress.textContent);
@@ -1560,7 +1675,7 @@
             const amount = prompt("Ingrese el monto de la recarga (entre 3 y 100 USDT):");
             
             if (!amount || isNaN(amount) || amount < 3 || amount > 100) {
-                alert("Monto inválido. Debe ser entre 3 y 100 USDT.");
+                alert("Monto inválido. Debe ser entre 3 và 100 USDT.");
                 return;
             }
             
@@ -1573,6 +1688,7 @@
                 status: 'pending'
             };
             
+            if (!currentUser.transactions) currentUser.transactions = [];
             currentUser.transactions.push(transaction);
             
             // Actualizar Firebase
@@ -1618,6 +1734,7 @@
                 address: address
             };
             
+            if (!currentUser.transactions) currentUser.transactions = [];
             currentUser.transactions.push(transaction);
             
             // Actualizar Firebase
@@ -1690,20 +1807,6 @@
             e.preventDefault();
             referralSection.style.display = 'block';
             userDataSection.style.display = 'none';
-        });
-        
-        // Copiar enlace de referido
-        copyReferral.addEventListener('click', function() {
-            navigator.clipboard.writeText(referralLink.textContent);
-            
-            // Cambiar temporalmente el texto del botón
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-            
-            // Restaurar el texto original después de 2 segundos
-            setTimeout(() => {
-                this.innerHTML = originalText;
-            }, 2000);
         });
         
         // Cerrar sesión
@@ -1785,34 +1888,27 @@
                                 user.initialAmount = rechargeTransaction.amount;
                                 user.balanceDuplicated = false; // RESETEAR EL ESTADO DE DUPLICACIÓN
                                 
-                                // Iniciar cuenta regresiva si es la primera recarga aprobada
-                                if (!user.countdownStart) {
-                                    user.countdownStart = new Date();
-                                    user.countdownEnd = new Date(user.countdownStart.getTime() + 24 * 60 * 60 * 1000);
-                                    
-                                    // Si es el usuario actual, mostrar y comenzar la cuenta regresiva
-                                    if (currentUser && currentUser.id === userId) {
-                                        countdownContainer.style.display = 'block';
-                                        startCountdown();
-                                    }
-                                }
-                                
                                 // Si fue referido, agregar ganancia al referidor
                                 if (user.referredBy) {
+                                    // Buscar al referidor por su código de referido
                                     const referringUser = users.find(u => u.referralCode === user.referredBy);
                                     if (referringUser) {
                                         const referralEarning = rechargeTransaction.amount * 0.15; // 15% de comisión
                                         referringUser.referralEarnings += referralEarning;
                                         referringUser.balance += referralEarning;
                                         
-                                        // Actualizar el registro del referido
-                                        const referral = referringUser.referrals.find(ref => ref.email === user.email);
-                                        if (referral) {
-                                            referral.earnings += referralEarning;
+                                        // Actualizar el registro del referido en la lista del referidor
+                                        if (referringUser.referrals) {
+                                            const referral = referringUser.referrals.find(ref => ref.email === user.email);
+                                            if (referral) {
+                                                referral.earnings += referralEarning;
+                                                referral.rechargeApproved = true;
+                                            }
                                         }
                                         
                                         // Agregar transacción de comisión al referidor
                                         const now = new Date();
+                                        if (!referringUser.transactions) referringUser.transactions = [];
                                         referringUser.transactions.push({
                                             type: 'referral',
                                             amount: referralEarning,
@@ -1823,6 +1919,18 @@
                                         
                                         // Actualizar referidor en Firebase
                                         updateUserInFirebase(referringUser);
+                                    }
+                                }
+                                
+                                // Iniciar cuenta regresiva si es la primera recarga aprobada
+                                if (!user.countdownStart) {
+                                    user.countdownStart = new Date();
+                                    user.countdownEnd = new Date(user.countdownStart.getTime() + 24 * 60 * 60 * 1000);
+                                    
+                                    // Si es el usuario actual, mostrar y comenzar la cuenta regresiva
+                                    if (currentUser && currentUser.id === userId) {
+                                        countdownContainer.style.display = 'block';
+                                        startCountdown();
                                     }
                                 }
                             }
