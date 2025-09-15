@@ -567,10 +567,6 @@
             z-index: 999;
         }
         
-        .overlay.active {
-            display: block;
-        }
-        
         /* Admin Panel Styles */
         .admin-panel {
             display: none;
@@ -1948,24 +1944,41 @@
                 });
             });
             
+            // MODIFICACIÓN IMPORTANTE: Lógica corregida para el checkbox de retiro aprobado
             document.querySelectorAll('.withdraw-approved').forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
                     const userId = this.getAttribute('data-user');
                     const user = users.find(u => u.id === userId);
+                    
                     if (user) {
-                        user.withdrawApproved = this.checked;
-                        
-                        // Si se aprueba un retiro, buscar la transacción pendiente y actualizarla
+                        // SOLO PROCESAR SI SE ESTÁ MARCANDO EL CHECKBOX (no al desmarcar)
                         if (this.checked) {
-                            const withdrawTransaction = user.transactions.find(t => 
+                            // Buscar la transacción de retiro pendiente MÁS RECIENTE
+                            const pendingWithdrawals = user.transactions.filter(t => 
                                 t.type === 'withdraw' && t.status === 'pending'
                             );
                             
-                            if (withdrawTransaction) {
-                                withdrawTransaction.status = 'approved';
-                                user.balance -= withdrawTransaction.amount;
+                            if (pendingWithdrawals.length > 0) {
+                                // Ordenar por fecha (más reciente primero)
+                                pendingWithdrawals.sort((a, b) => new Date(b.date) - new Date(a.date));
+                                const mostRecentWithdrawal = pendingWithdrawals[0];
+                                
+                                // Aprobar la transacción
+                                mostRecentWithdrawal.status = 'approved';
+                                
+                                // Restar el monto del saldo
+                                user.balance -= mostRecentWithdrawal.amount;
+                                
+                                alert(`Retiro de ${mostRecentWithdrawal.amount} USDT aprobado para ${user.email}`);
+                            } else {
+                                alert("No hay retiros pendientes para este usuario");
+                                this.checked = false; // Desmarcar si no hay retiros pendientes
+                                return;
                             }
                         }
+                        
+                        // El checkbox ahora controla si el usuario TIENE PERMISO para retirar
+                        user.withdrawApproved = this.checked;
                         
                         // Actualizar usuario en Firebase
                         updateUserInFirebase(user);
